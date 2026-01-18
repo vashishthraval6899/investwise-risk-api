@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import joblib
@@ -16,7 +17,10 @@ app.add_middleware(
 )
 
 # Load model ONCE
-model = joblib.load("models/user_risk_model.pkl")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(BASE_DIR, "models", "user_risk_model.pkl")
+
+model = joblib.load(MODEL_PATH)
 
 
 @app.post("/predict-risk")
