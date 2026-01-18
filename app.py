@@ -16,7 +16,7 @@ app.add_middleware(
 )
 
 # Load model ONCE
-model = joblib.load("models/best_user_risk_model.pkl")
+model = joblib.load("models/user_risk_model.pkl")
 
 
 @app.post("/predict-risk")
