@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import joblib
 import shap
+import numpy as np
 import pandas as pd
 
 from logic.hybrid_engine import (
@@ -27,7 +28,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "user_risk_model.pkl")
 
 model = joblib.load(MODEL_PATH)
-explainer = None
 
 @app.post("/predict-risk")
 def predict_risk(user: dict):
@@ -43,21 +43,19 @@ def predict_risk(user: dict):
 
 @app.post("/explain-risk")
 def explain_risk(user: dict):
-
     try:
-        # Get ML-ready input
+        # Get ML-ready input & probabilities
         X, probs = ml_risk_raw_prediction(model, user)
 
-        # Create SHAP explainer dynamically (SKLEARN SAFE)
+        # Initialize SHAP dynamically (SKLEARN SAFE)
         explainer = shap.Explainer(model, X)
 
-        # SHAP values
         shap_values = explainer(X)
 
-        # Predicted class index
+        # Predicted class
         pred_class = int(np.argmax(probs))
 
-        # SHAP values for predicted class
+        # Get SHAP values for predicted class
         class_shap_vals = shap_values.values[0][pred_class]
 
         explanation = []
@@ -85,6 +83,7 @@ def explain_risk(user: dict):
             "error": "Explainability failed",
             "details": str(e)
         }
+
 
 @app.get("/")
 def health():
