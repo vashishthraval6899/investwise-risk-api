@@ -4,36 +4,34 @@ from logic.rule_engine import rule_based_risk_score
 
 def build_model_features(user: dict) -> pd.DataFrame:
     """
-    Maps frontend user inputs to model-trained feature space.
-    This is the single source of truth for ML + SHAP.
+    Build EXACT numerical feature set used by ML model.
+    All outputs MUST be numeric (int / float).
     """
 
-    # ---------- MAPPINGS ----------
-    # investment_duration → horizon
+    # investment_duration → horizon (numeric)
     horizon = user["investment_duration"]
 
-    # risk_appetite (numeric) → risk_tolerance (categorical)
-    risk_tolerance_map = {0: "low", 1: "medium", 2: "high"}
-    risk_tolerance = risk_tolerance_map.get(user["risk_appetite"], "medium")
+    # risk_appetite already numeric (assumed 0=low,1=med,2=high)
+    risk_tolerance = user["risk_appetite"]
 
-    # liquidity_needs → emergency_fund
-    emergency_fund = "no" if user["liquidity_needs"] == 1 else "yes"
+    # liquidity_needs → emergency_fund (numeric)
+    # 1 = needs liquidity → no emergency fund
+    emergency_fund = 0 if user["liquidity_needs"] == 1 else 1
 
-    # expected_returns → market_exp (proxy mapping)
+    # expected_returns → market_exp (numeric proxy)
     if user["expected_returns"] >= 15:
-        market_exp = "advanced"
+        market_exp = 2   # advanced
     elif user["expected_returns"] >= 10:
-        market_exp = "intermediate"
+        market_exp = 1   # intermediate
     else:
-        market_exp = "beginner"
+        market_exp = 0   # beginner
 
-    # job_stability (frontend doesn’t collect it yet)
-    job_stability = "stable"   # sensible default
+    # job_stability (default = stable)
+    job_stability = 1   # stable = 1, unstable = 0
 
-    # income (frontend doesn’t collect it yet)
-    income = "medium"          # sensible default
+    # income (default medium)
+    income = 1          # low=0, medium=1, high=2
 
-    # ---------- FINAL FEATURE DICT ----------
     features = {
         "age": user["age"],
         "horizon": horizon,
@@ -45,6 +43,7 @@ def build_model_features(user: dict) -> pd.DataFrame:
     }
 
     return pd.DataFrame([features])
+
 
 
 def preprocess_user_input(user: dict) -> pd.DataFrame:
