@@ -2,6 +2,13 @@ import pandas as pd
 import numpy as np
 from logic.rule_engine import rule_based_risk_score
 
+def preprocess_user_input(user: dict) -> pd.DataFrame:
+    """
+    Safe preprocessing wrapper for ML + SHAP.
+    Does NOT change existing behavior.
+    """
+    return pd.DataFrame([user])
+
 RISK_TO_NUM = {"low": 0, "medium": 1, "high": 2}
 NUM_TO_RISK = {v: k for k, v in RISK_TO_NUM.items()}
 
@@ -61,3 +68,14 @@ def hybrid_risk_engine(user, model):
         "ml_confidence": round(ml_conf, 3),
         "decision_source": decision_source,
     }
+
+def ml_risk_raw_prediction(model, user: dict):
+    """
+    Used ONLY for explainability.
+    Returns:
+    - DataFrame input
+    - Raw probability output
+    """
+    df = pd.DataFrame([user])
+    probs = model.predict_proba(df)[0]
+    return df, probs
