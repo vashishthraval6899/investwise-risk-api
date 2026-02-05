@@ -42,9 +42,12 @@ def build_model_features(user: dict) -> pd.DataFrame:
         "income": income,
     }
 
-    return pd.DataFrame([features])
+    df = pd.DataFrame([features])
 
-
+    # Force numeric dtype (CRITICAL for SHAP)
+    df = df.apply(pd.to_numeric, errors="raise")
+    
+    return df
 
 def preprocess_user_input(user: dict) -> pd.DataFrame:
     """
