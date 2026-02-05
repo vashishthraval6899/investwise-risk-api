@@ -4,22 +4,45 @@ from logic.rule_engine import rule_based_risk_score
 
 def build_model_features(user: dict) -> pd.DataFrame:
     """
-    Build EXACT feature set used by ML model during training.
-    This must stay in sync with training data.
+    Maps frontend user inputs to model-trained feature space.
+    This is the single source of truth for ML + SHAP.
     """
 
+    # ---------- MAPPINGS ----------
+    # investment_duration → horizon
+    horizon = user["investment_duration"]
+
+    # risk_appetite (numeric) → risk_tolerance (categorical)
+    risk_tolerance_map = {0: "low", 1: "medium", 2: "high"}
+    risk_tolerance = risk_tolerance_map.get(user["risk_appetite"], "medium")
+
+    # liquidity_needs → emergency_fund
+    emergency_fund = "no" if user["liquidity_needs"] == 1 else "yes"
+
+    # expected_returns → market_exp (proxy mapping)
+    if user["expected_returns"] >= 15:
+        market_exp = "advanced"
+    elif user["expected_returns"] >= 10:
+        market_exp = "intermediate"
+    else:
+        market_exp = "beginner"
+
+    # job_stability (frontend doesn’t collect it yet)
+    job_stability = "stable"   # sensible default
+
+    # income (frontend doesn’t collect it yet)
+    income = "medium"          # sensible default
+
+    # ---------- FINAL FEATURE DICT ----------
     features = {
         "age": user["age"],
-        "horizon": user["horizon"],
-        "risk_tolerance": user["risk_tolerance"],
-        "emergency_fund": user["emergency_fund"],
-        "market_exp": user["market_exp"],
-        "job_stability": user["job_stability"],
+        "horizon": horizon,
+        "risk_tolerance": risk_tolerance,
+        "emergency_fund": emergency_fund,
+        "market_exp": market_exp,
+        "job_stability": job_stability,
+        "income": income,
     }
-
-    # income was used during training but not in rule engine
-    # decide default or mapping (example below)
-    features["income"] = user.get("income", "medium")
 
     return pd.DataFrame([features])
 
