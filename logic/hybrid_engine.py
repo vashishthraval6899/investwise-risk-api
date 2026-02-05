@@ -2,6 +2,28 @@ import pandas as pd
 import numpy as np
 from logic.rule_engine import rule_based_risk_score
 
+def build_model_features(user: dict) -> pd.DataFrame:
+    """
+    Build EXACT feature set used by ML model during training.
+    This must stay in sync with training data.
+    """
+
+    features = {
+        "age": user["age"],
+        "horizon": user["horizon"],
+        "risk_tolerance": user["risk_tolerance"],
+        "emergency_fund": user["emergency_fund"],
+        "market_exp": user["market_exp"],
+        "job_stability": user["job_stability"],
+    }
+
+    # income was used during training but not in rule engine
+    # decide default or mapping (example below)
+    features["income"] = user.get("income", "medium")
+
+    return pd.DataFrame([features])
+
+
 def preprocess_user_input(user: dict) -> pd.DataFrame:
     """
     Safe preprocessing wrapper for ML + SHAP.
@@ -27,7 +49,7 @@ def rule_risk_label(user):
 
 
 def ml_risk_label(model, user):
-    df = pd.DataFrame([user])
+    df = build_model_features(user)
     probs = model.predict_proba(df)[0]
     pred = np.argmax(probs)
     return NUM_TO_RISK[pred], float(np.max(probs))
@@ -76,6 +98,6 @@ def ml_risk_raw_prediction(model, user: dict):
     - DataFrame input
     - Raw probability output
     """
-    df = pd.DataFrame([user])
+    df = build_model_features(user)
     probs = model.predict_proba(df)[0]
     return df, probs
