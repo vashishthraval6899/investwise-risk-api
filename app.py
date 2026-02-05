@@ -27,12 +27,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "models", "user_risk_model.pkl")
 
 model = joblib.load(MODEL_PATH)
-try:
-    explainer = shap.TreeExplainer(model)
-except Exception as e:
-    explainer = None
-    print("SHAP explainer init failed:", e)
-
+explainer = None
 
 @app.post("/predict-risk")
 def predict_risk(user: dict):
@@ -49,28 +44,24 @@ def predict_risk(user: dict):
 @app.post("/explain-risk")
 def explain_risk(user: dict):
 
-    # Safety check
-    if explainer is None:
-        return {
-            "error": "Explainability not available",
-            "message": "SHAP explainer failed to initialize"
-        }
-
     try:
-        # ML-only preprocessing
+        # Get ML-ready input
         X, probs = ml_risk_raw_prediction(model, user)
 
-        # Predict class index
+        # Create SHAP explainer dynamically (SKLEARN SAFE)
+        explainer = shap.Explainer(model, X)
+
+        # SHAP values
+        shap_values = explainer(X)
+
+        # Predicted class index
         pred_class = int(np.argmax(probs))
 
-        # SHAP explanation
-        shap_values = explainer.shap_values(X)
-
-        # For multiclass, select predicted class
-        shap_vals = shap_values[pred_class][0]
+        # SHAP values for predicted class
+        class_shap_vals = shap_values.values[0][pred_class]
 
         explanation = []
-        for col, val, shap_val in zip(X.columns, X.iloc[0], shap_vals):
+        for col, val, shap_val in zip(X.columns, X.iloc[0], class_shap_vals):
             explanation.append({
                 "feature": col,
                 "value": float(val),
