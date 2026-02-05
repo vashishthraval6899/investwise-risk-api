@@ -25,69 +25,67 @@ app.add_middleware(
 
 # Load model ONCE
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "models", "user_risk_model.pkl")
+OLD_MODEL_PATH = os.path.join(BASE_DIR, "models", "user_risk_model.pkl")
+NEW_MODEL_PATH = os.path.join(BASE_DIR, "models", "new_user_risk_lgbm.pkl")
 
-model = joblib.load(MODEL_PATH)
+old_model = joblib.load(OLD_MODEL_PATH)
+risk_model = joblib.load(NEW_MODEL_PATH)
 
 @app.post("/predict-risk")
 def predict_risk(user: dict):
 
-    risk_result = hybrid_risk_engine(user, model)
-    funds, clusters = recommend_funds(risk_result["final_risk"])
+    X = pd.DataFrame([{
+        "age": user["age"],
+        "risk_appetite": user["risk_appetite"],
+        "investment_duration": user["investment_duration"],
+        "liquidity_needs": user["liquidity_needs"],
+        "expected_returns": user["expected_returns"]
+    }])
+
+    risk_score = float(risk_model.predict(X)[0])
+
+    funds, clusters = recommend_funds(risk_score)
 
     return {
-        **risk_result,
+        "risk_score": round(risk_score, 3),
         "recommended_clusters": clusters,
         "recommended_funds": funds
     }
 
+
 @app.post("/explain-risk")
 def explain_risk(user: dict):
 
-    try:
-        # 1️⃣ Get ML-ready input
-        X, probs = ml_risk_raw_prediction(model, user)
+    X = pd.DataFrame([{
+        "age": user["age"],
+        "risk_appetite": user["risk_appetite"],
+        "investment_duration": user["investment_duration"],
+        "liquidity_needs": user["liquidity_needs"],
+        "expected_returns": user["expected_returns"]
+    }])
 
-        # 2️⃣ FORCE numeric dtype (CRITICAL FIX ✅)
-        X = X.astype(float)
+    explainer = shap.TreeExplainer(risk_model)
+    shap_values = explainer.shap_values(X)[0]
 
-        # 3️⃣ Create SHAP explainer dynamically (sklearn-safe)
-        explainer = shap.Explainer(model, X)
+    explanation = []
+    for col, val, shap_val in zip(X.columns, X.iloc[0], shap_values):
+        explanation.append({
+            "feature": col,
+            "value": float(val),
+            "impact": round(float(shap_val), 4),
+            "effect": "increase" if shap_val > 0 else "decrease"
+        })
 
-        # 4️⃣ SHAP values
-        shap_values = explainer(X)
+    explanation = sorted(
+        explanation,
+        key=lambda x: abs(x["impact"]),
+        reverse=True
+    )
 
-        # 5️⃣ Predicted class index
-        pred_class = int(np.argmax(probs))
-
-        # 6️⃣ SHAP values for predicted class
-        class_shap_vals = shap_values.values[0][pred_class]
-
-        explanation = []
-        for col, val, shap_val in zip(X.columns, X.iloc[0], class_shap_vals):
-            explanation.append({
-                "feature": col,
-                "value": float(val),
-                "impact": round(float(shap_val), 4),
-                "effect": "increase" if shap_val > 0 else "decrease"
-            })
-
-        explanation = sorted(
-            explanation,
-            key=lambda x: abs(x["impact"]),
-            reverse=True
-        )[:5]
-
-        return {
-            "ml_predicted_class": pred_class,
-            "top_factors": explanation
-        }
-
-    except Exception as e:
-        return {
-            "error": "Explainability failed",
-            "details": str(e)
-        }
+    return {
+        "risk_score": round(float(risk_model.predict(X)[0]), 3),
+        "top_factors": explanation[:3]
+    }
 
 
 @app.get("/")
