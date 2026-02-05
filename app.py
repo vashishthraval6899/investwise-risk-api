@@ -1,9 +1,9 @@
 import os
+import numpy as np
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import joblib
 import shap
-import numpy as np
 import pandas as pd
 
 from logic.hybrid_engine import (
@@ -43,19 +43,24 @@ def predict_risk(user: dict):
 
 @app.post("/explain-risk")
 def explain_risk(user: dict):
+
     try:
-        # Get ML-ready input & probabilities
+        # 1️⃣ Get ML-ready input
         X, probs = ml_risk_raw_prediction(model, user)
 
-        # Initialize SHAP dynamically (SKLEARN SAFE)
+        # 2️⃣ FORCE numeric dtype (CRITICAL FIX ✅)
+        X = X.astype(float)
+
+        # 3️⃣ Create SHAP explainer dynamically (sklearn-safe)
         explainer = shap.Explainer(model, X)
 
+        # 4️⃣ SHAP values
         shap_values = explainer(X)
 
-        # Predicted class
+        # 5️⃣ Predicted class index
         pred_class = int(np.argmax(probs))
 
-        # Get SHAP values for predicted class
+        # 6️⃣ SHAP values for predicted class
         class_shap_vals = shap_values.values[0][pred_class]
 
         explanation = []
