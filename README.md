@@ -1,34 +1,40 @@
-# 📈 InvestWise: Fund Analysis & Clustering Engine
+# 📈 InvestWiseInvestWise: Supervised Learning & SHAP API
+**Focus:** Risk Prediction, Explainable AI, Production API.
 
-![Python](https://img.shields.io/badge/Python-Data_Science-blue)
-![Scikit-Learn](https://img.shields.io/badge/Sklearn-KMeans-orange)
-![Netlify](https://img.shields.io/badge/Deployment-Netlify-00C7B7)
+# 🧠 InvestWise: Intelligent Risk Engine (API)
 
-> **The "Market Intelligence" layer of the InvestWise system, handling fund segmentation and user interface.**
+![FastAPI](https://img.shields.io/badge/FastAPI-High_Performance-009688)
+![LightGBM](https://img.shields.io/badge/Model-LightGBM-success)
+![SHAP](https://img.shields.io/badge/XAI-Explainable_AI-ff69b4)
+![Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E)
 
-## 🧠 The Unsupervised Logic
-Instead of relying on generic labels like "Large Cap," this module analyzes **1,000+ Mutual Funds** using hard mathematical metrics.
+> **The "Brain" of InvestWise. A Hybrid AI API that predicts Investor Risk and explains the 'Why'.**
 
-### Feature Engineering
-We engineered composite financial features to capture true behavior:
-- **Risk-Adjusted Strength:** Combination of Sharpe, Sortino, and Alpha.
-- **Momentum:** 1Y and 3Y return trajectories.
-- **Volatility Profile:** Standard Deviation relative to Category benchmarks.
+## 🚀 System Architecture
+This is a production-grade Microservice deployed on **Railway**.
 
-### Clustering (K-Means)
-Funds are segmented into dynamic clusters:
-- **Cluster 0 (Safe Harbors):** Low Volatility, Stable Returns.
-- **Cluster 1 (Growth Engines):** High Alpha, High Beta.
-- **Cluster 2 (Underperformers):** High Expense Ratio, Negative Alpha.
+1.  **Input:** User Demographics (Age, Income, Horizon, Goals).
+2.  **Model (LightGBM):** Predicts a continuous **Risk Score (0.0 - 1.0)**.
+3.  **Explainability (SHAP):** Calculates feature contribution (e.g., *"Age=25 increased risk score by +0.1"*).
+4.  **Hybrid Mapping:** Maps the predicted Risk Score to the Fund Clusters (from Repo 3).
 
-## 💻 Frontend (Web Interface)
-- Built with **HTML/CSS/JS**.
-- Hosted on **Netlify**.
-- Consumes the **FastAPI Risk Engine** (Repo 4) to display recommendations.
+## 🔮 Why LightGBM + SHAP?
+- **LightGBM:** Chosen over Neural Networks for its superior performance on tabular financial data and ability to capture non-linear relationships.
+- **SHAP (TreeExplainer):** Provides "Glass Box" transparency, building trust with retail investors by explaining every recommendation.
 
-## 📂 Project Structure
-```bash
-├── analysis/           # Jupyter Notebooks for EDA and Clustering
-├── data/              # Scraped Mutual Fund Data (1000+ schemes)
-├── web-interface/     # Frontend code deployed to Netlify
-└── models/            # Serialized K-Means models
+## 🔌 API Endpoints
+
+### `POST /predict-risk`
+Accepts user profile and returns:
+- Calculated Risk Score.
+- Recommended Fund Cluster.
+- Top 5 Specific Mutual Funds.
+
+### `POST /explain-risk`
+Returns SHAP values for visualization:
+```json
+{
+  "feature": "investment_horizon",
+  "impact": "+0.42",
+  "description": "Long-term horizon increases risk capacity."
+}
